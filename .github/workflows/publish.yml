@@ -117,24 +117,12 @@ jobs:
           set -euo pipefail
           CURRENT_VERSION="${{ steps.determine.outputs.current_version }}"
           RELEASE_KIND="${{ steps.determine.outputs.release_kind }}"
-          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)
-
           BODY_FILE="$RUNNER_TEMP/release-notes.md"
-          {
-            if [ "$RELEASE_KIND" = "rc" ]; then
-              echo "## Release Candidate v${CURRENT_VERSION}"
-            else
-              echo "## Release v${CURRENT_VERSION}"
-            fi
-            echo ""
-            if [ -n "$LAST_TAG" ]; then
-              echo "Compare changes: https://github.com/${GITHUB_REPOSITORY}/compare/${LAST_TAG}...v${CURRENT_VERSION}"
-              echo ""
-              git log --no-merges --pretty=format:'- %s (%h)' "${LAST_TAG}..HEAD"
-            else
-              git log --no-merges --pretty=format:'- %s (%h)'
-            fi
-          } >"$BODY_FILE"
+          node scripts/generate-release-notes.mjs \
+            --version "$CURRENT_VERSION" \
+            --kind "$RELEASE_KIND" \
+            --repo "$GITHUB_REPOSITORY" \
+            --output "$BODY_FILE"
 
           echo "body_file=$BODY_FILE" >> "$GITHUB_OUTPUT"
 
