@@ -61,7 +61,7 @@ export const en = {
     "🔴 OpenCode Server is unavailable\n\nUse /opencode_start to start the server.",
 
   "projects.empty":
-    "📭 No projects found.\n\nOpen a project in OpenCode first, then it will appear here.",
+    "📭 No projects found.\n\nOpen a directory in OpenCode and create at least one session, then it will appear here.",
   "projects.select": "Select a project:",
   "projects.select_with_current": "Select a project:\n\nCurrent: 🏗 {project}",
   "projects.fetch_error":

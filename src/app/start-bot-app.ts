@@ -4,6 +4,7 @@ import { createBot } from "../bot/index.js";
 import { config } from "../config.js";
 import { loadSettings } from "../settings/manager.js";
 import { processManager } from "../process/manager.js";
+import { warmupSessionDirectoryCache } from "../session/cache-manager.js";
 import { getRuntimeMode } from "../runtime/mode.js";
 import { logger } from "../utils/logger.js";
 
@@ -30,6 +31,7 @@ export async function startBotApp(): Promise<void> {
 
   await loadSettings();
   await processManager.initialize();
+  await warmupSessionDirectoryCache();
 
   const bot = createBot();
 

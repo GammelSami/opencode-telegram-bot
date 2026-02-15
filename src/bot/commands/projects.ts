@@ -2,6 +2,7 @@ import { CommandContext, Context } from "grammy";
 import { InlineKeyboard } from "grammy";
 import { setCurrentProject, getCurrentProject } from "../../settings/manager.js";
 import { getProjects } from "../../project/manager.js";
+import { syncSessionDirectoryCache } from "../../session/cache-manager.js";
 import { clearSession } from "../../session/manager.js";
 import { summaryAggregator } from "../../summary/aggregator.js";
 import { pinnedMessageManager } from "../../pinned/manager.js";
@@ -14,6 +15,7 @@ import { logger } from "../../utils/logger.js";
 import { t } from "../../i18n/index.js";
 
 const MAX_INLINE_BUTTON_LABEL_LENGTH = 64;
+const MAX_PROJECTS_TO_SHOW = 10;
 
 function formatProjectButtonLabel(label: string, isActive: boolean): string {
   const prefix = isActive ? "✅ " : "";
@@ -28,9 +30,11 @@ function formatProjectButtonLabel(label: string, isActive: boolean): string {
 
 export async function projectsCommand(ctx: CommandContext<Context>) {
   try {
+    await syncSessionDirectoryCache();
     const projects = await getProjects();
+    const projectsToShow = projects.slice(0, MAX_PROJECTS_TO_SHOW);
 
-    if (projects.length === 0) {
+    if (projectsToShow.length === 0) {
       await ctx.reply(t("projects.empty"));
       return;
     }
@@ -38,7 +42,7 @@ export async function projectsCommand(ctx: CommandContext<Context>) {
     const keyboard = new InlineKeyboard();
     const currentProject = getCurrentProject();
 
-    projects.forEach((project, index) => {
+    projectsToShow.forEach((project, index) => {
       const isActive =
         currentProject &&
         (project.id === currentProject.id || project.worktree === currentProject.worktree);

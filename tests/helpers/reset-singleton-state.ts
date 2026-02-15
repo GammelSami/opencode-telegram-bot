@@ -58,6 +58,7 @@ export async function resetSingletonState(): Promise<void> {
     { pinnedMessageManager },
     { processManager },
     { stopEventListening },
+    { __resetSessionDirectoryCacheForTests },
   ] = await Promise.all([
     import("../../src/question/manager.js"),
     import("../../src/permission/manager.js"),
@@ -66,6 +67,7 @@ export async function resetSingletonState(): Promise<void> {
     import("../../src/pinned/manager.js"),
     import("../../src/process/manager.js"),
     import("../../src/opencode/events.js"),
+    import("../../src/session/cache-manager.js"),
   ]);
 
   stopEventListening();
@@ -122,4 +124,6 @@ export async function resetSingletonState(): Promise<void> {
     startTime: null,
     isRunning: false,
   };
+
+  __resetSessionDirectoryCacheForTests();
 }

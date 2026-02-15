@@ -37,6 +37,7 @@ import { summaryAggregator } from "../summary/aggregator.js";
 import { formatSummary, formatToolInfo } from "../summary/formatter.js";
 import { opencodeClient } from "../opencode/client.js";
 import { getCurrentSession, setCurrentSession } from "../session/manager.js";
+import { ingestSessionInfoForCache } from "../session/cache-manager.js";
 import { getCurrentProject } from "../settings/manager.js";
 import { getStoredAgent } from "../agent/manager.js";
 import { getStoredModel } from "../model/manager.js";
@@ -303,6 +304,19 @@ async function ensureEventSubscription(): Promise<void> {
 
   logger.info(`[Bot] Subscribing to OpenCode events for project: ${currentProject.worktree}`);
   subscribeToEvents(currentProject.worktree, (event) => {
+    if (event.type === "session.created" || event.type === "session.updated") {
+      const info = (
+        event.properties as { info?: { directory?: string; time?: { updated?: number } } }
+      ).info;
+
+      if (info?.directory) {
+        safeBackgroundTask({
+          taskName: `session.cache.${event.type}`,
+          task: () => ingestSessionInfoForCache(info),
+        });
+      }
+    }
+
     summaryAggregator.processEvent(event);
   }).catch((err) => {
     logger.error("Failed to subscribe to events:", err);
@@ -565,6 +579,7 @@ export function createBot(): Bot<Context> {
       };
 
       setCurrentSession(currentSession);
+      await ingestSessionInfoForCache(session);
 
       // Create pinned message for new session
       try {

@@ -20,6 +20,15 @@ export interface ServerProcessInfo {
   startTime: string; // ISO string
 }
 
+export interface SessionDirectoryCacheInfo {
+  version: 1;
+  lastSyncedUpdatedAt: number;
+  directories: Array<{
+    worktree: string;
+    lastUpdated: number;
+  }>;
+}
+
 export interface Settings {
   currentProject?: ProjectInfo;
   currentSession?: SessionInfo;
@@ -27,6 +36,7 @@ export interface Settings {
   currentModel?: ModelInfo;
   pinnedMessageId?: number;
   serverProcess?: ServerProcessInfo;
+  sessionDirectoryCache?: SessionDirectoryCacheInfo;
 }
 
 function getSettingsFilePath(): string {
@@ -46,15 +56,25 @@ async function readSettingsFile(): Promise<Settings> {
   }
 }
 
-function writeSettingsFile(settings: Settings): void {
-  import("fs/promises").then((fs) => {
-    const settingsFilePath = getSettingsFilePath();
-    fs.mkdir(path.dirname(settingsFilePath), { recursive: true })
-      .then(() => fs.writeFile(settingsFilePath, JSON.stringify(settings, null, 2)))
-      .catch((err: Error) => {
+let settingsWriteQueue: Promise<void> = Promise.resolve();
+
+function writeSettingsFile(settings: Settings): Promise<void> {
+  settingsWriteQueue = settingsWriteQueue
+    .catch(() => {
+      // Keep write queue alive after failed writes.
+    })
+    .then(async () => {
+      try {
+        const fs = await import("fs/promises");
+        const settingsFilePath = getSettingsFilePath();
+        await fs.mkdir(path.dirname(settingsFilePath), { recursive: true });
+        await fs.writeFile(settingsFilePath, JSON.stringify(settings, null, 2));
+      } catch (err) {
         logger.error("[SettingsManager] Error writing settings file:", err);
-      });
-  });
+      }
+    });
+
+  return settingsWriteQueue;
 }
 
 let currentSettings: Settings = {};
@@ -65,12 +85,12 @@ export function getCurrentProject(): ProjectInfo | undefined {
 
 export function setCurrentProject(projectInfo: ProjectInfo): void {
   currentSettings.currentProject = projectInfo;
-  writeSettingsFile(currentSettings);
+  void writeSettingsFile(currentSettings);
 }
 
 export function clearProject(): void {
   currentSettings.currentProject = undefined;
-  writeSettingsFile(currentSettings);
+  void writeSettingsFile(currentSettings);
 }
 
 export function getCurrentSession(): SessionInfo | undefined {
@@ -79,12 +99,12 @@ export function getCurrentSession(): SessionInfo | undefined {
 
 export function setCurrentSession(sessionInfo: SessionInfo): void {
   currentSettings.currentSession = sessionInfo;
-  writeSettingsFile(currentSettings);
+  void writeSettingsFile(currentSettings);
 }
 
 export function clearSession(): void {
   currentSettings.currentSession = undefined;
-  writeSettingsFile(currentSettings);
+  void writeSettingsFile(currentSettings);
 }
 
 export function getCurrentAgent(): string | undefined {
@@ -93,12 +113,12 @@ export function getCurrentAgent(): string | undefined {
 
 export function setCurrentAgent(agentName: string): void {
   currentSettings.currentAgent = agentName;
-  writeSettingsFile(currentSettings);
+  void writeSettingsFile(currentSettings);
 }
 
 export function clearCurrentAgent(): void {
   currentSettings.currentAgent = undefined;
-  writeSettingsFile(currentSettings);
+  void writeSettingsFile(currentSettings);
 }
 
 export function getCurrentModel(): ModelInfo | undefined {
@@ -107,12 +127,12 @@ export function getCurrentModel(): ModelInfo | undefined {
 
 export function setCurrentModel(modelInfo: ModelInfo): void {
   currentSettings.currentModel = modelInfo;
-  writeSettingsFile(currentSettings);
+  void writeSettingsFile(currentSettings);
 }
 
 export function clearCurrentModel(): void {
   currentSettings.currentModel = undefined;
-  writeSettingsFile(currentSettings);
+  void writeSettingsFile(currentSettings);
 }
 
 export function getPinnedMessageId(): number | undefined {
@@ -121,12 +141,12 @@ export function getPinnedMessageId(): number | undefined {
 
 export function setPinnedMessageId(messageId: number): void {
   currentSettings.pinnedMessageId = messageId;
-  writeSettingsFile(currentSettings);
+  void writeSettingsFile(currentSettings);
 }
 
 export function clearPinnedMessageId(): void {
   currentSettings.pinnedMessageId = undefined;
-  writeSettingsFile(currentSettings);
+  void writeSettingsFile(currentSettings);
 }
 
 export function getServerProcess(): ServerProcessInfo | undefined {
@@ -135,12 +155,31 @@ export function getServerProcess(): ServerProcessInfo | undefined {
 
 export function setServerProcess(processInfo: ServerProcessInfo): void {
   currentSettings.serverProcess = processInfo;
-  writeSettingsFile(currentSettings);
+  void writeSettingsFile(currentSettings);
 }
 
 export function clearServerProcess(): void {
   currentSettings.serverProcess = undefined;
-  writeSettingsFile(currentSettings);
+  void writeSettingsFile(currentSettings);
+}
+
+export function getSessionDirectoryCache(): SessionDirectoryCacheInfo | undefined {
+  return currentSettings.sessionDirectoryCache;
+}
+
+export function setSessionDirectoryCache(cache: SessionDirectoryCacheInfo): Promise<void> {
+  currentSettings.sessionDirectoryCache = cache;
+  return writeSettingsFile(currentSettings);
+}
+
+export function clearSessionDirectoryCache(): void {
+  currentSettings.sessionDirectoryCache = undefined;
+  void writeSettingsFile(currentSettings);
+}
+
+export function __resetSettingsForTests(): void {
+  currentSettings = {};
+  settingsWriteQueue = Promise.resolve();
 }
 
 export async function loadSettings(): Promise<void> {

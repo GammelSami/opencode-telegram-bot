@@ -1,6 +1,7 @@
 import { CommandContext, Context } from "grammy";
 import { opencodeClient } from "../../opencode/client.js";
 import { setCurrentSession, SessionInfo } from "../../session/manager.js";
+import { ingestSessionInfoForCache } from "../../session/cache-manager.js";
 import { getCurrentProject } from "../../settings/manager.js";
 import { pinnedMessageManager } from "../../pinned/manager.js";
 import { keyboardManager } from "../../keyboard/manager.js";
@@ -40,6 +41,7 @@ export async function newCommand(ctx: CommandContext<Context>) {
       directory: currentProject.worktree,
     };
     setCurrentSession(sessionInfo);
+    await ingestSessionInfoForCache(session);
 
     // Initialize pinned message manager and create pinned message
     if (!pinnedMessageManager.isInitialized()) {
